@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rxz Panel | Fix Scroll ⚡</title>
+    <style>
+        :root {
+            --bg-black: #000000;
+            --accent-red: #ff0000;
+            --matrix-purple: #9d4edd;
+            --unified-bg: url('https://raw.githubusercontent.com/Rxz60/--/refs/heads/main/IMG_2652.png');
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--bg-black);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            /* سيتم تغيير overflow عبر JavaScript عند الدخول */
+            overflow: hidden; 
+            height: 100%;
+        }
+
+        /* 1. شاشة التحميل */
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-black) var(--unified-bg) no-repeat center center;
+            background-size: cover; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #loader-screen::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: -1; }
+        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.85; }
+        #loading-text { color: var(--accent-red); font-size: 2.5rem; font-weight: bold; text-shadow: 0 0 20px var(--accent-red); z-index: 10; }
+
+        /* 2. شاشة الترحيب */
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-black) var(--unified-bg) no-repeat center center;
+            background-size: cover; z-index: 9998; display: none;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        #welcome-screen::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1; }
+        #text-container { z-index: 10; padding: 25px; max-width: 85%; }
+        #typewriter-text { font-size: 1.8rem; color: white; min-height: 1.6em; margin-bottom: 40px; }
+        
+        .enter-btn {
+            background: rgba(255, 255, 255, 0.05); color: white; border: 2px solid white; 
+            padding: 18px 50px; font-size: 1.3rem; cursor: pointer; border-radius: 50px;
+            transition: 0.4s; opacity: 0; transform: translateY(30px); z-index: 10; backdrop-filter: blur(5px);
+        }
+        .enter-btn.show { opacity: 1; transform: translateY(0); }
+
+        /* 3. الموقع الأساسي */
+        #main-site {
+            display: none; position: relative; min-height: 100vh;
+            background: var(--unified-bg) fixed center; background-size: cover;
+        }
+        #main-site::after { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: -1; }
+        
+        header { text-align: center; padding: 60px 0; position: relative; z-index: 2; }
+        .profile-img { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #111; margin-bottom: 20px; }
+        
+        .scripts-container { 
+            display: flex; flex-direction: column; align-items: center; gap: 30px; 
+            padding-bottom: 100px; position: relative; z-index: 2;
+        }
+        .script-card { background: #080808; border-radius: 15px; width: 90%; max-width: 550px; padding: 25px; border: 1px solid #151515; }
+        .script-title { text-align: right; font-weight: bold; margin-bottom: 15px; color: #fff; }
+        
+        .lua-window { background: #030303; border-radius: 12px; padding: 18px; border: 1px solid #111; }
+        .lua-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .dot-group { display: flex; gap: 6px; order: 1; } 
+        .lua-label { order: 2; color: #444; font-size: 0.75rem; font-family: monospace; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #1a1a1a; }
+        
+        .lua-content { font-family: monospace; font-size: 0.85rem; color: #666; direction: ltr; text-align: left; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+        .copy-btn { background: #0a0a0a; color: white; border: 1px solid #222; width: 100%; padding: 15px; margin-top: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="loader-screen">
+        <canvas id="matrix-canvas"></canvas>
+        <div id="loading-text">جاري تحميل ….⚡️</div>
+    </div>
+
+    <div id="welcome-screen">
+        <div id="text-container">
+            <div id="typewriter-text"></div>
+            <button class="enter-btn" id="enter-btn" onclick="enterSite()">نبدأ في دخول الموقع</button>
+        </div>
+    </div>
+
+    <div id="main-site">
+        <header>
+            <img src="https://raw.githubusercontent.com/Rxz60/Rxz/refs/heads/main/IMG_2533.jpeg" class="profile-img">
+            <h1>Rxz Panel</h1>
+            <p style="color:#444;"> Rxz | Specialist Server</p>
+        </header>
+
+        <div class="scripts-container">
+            </div>
+    </div>
+
+    <script>
+        const scripts = [
+            { name: "ILLUSION DIV", code: 'loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/36f9254fca8bb9ea84cccee053bbc2b29260cb72a099832ff357f6b56b03c454/download"))()' },
+            { name: "Xbino hub", code: 'loadstring(game:HttpGet("https://pastebin.com/raw/K5YnW25X"))()' },
+            { name: "Ego hub for pc", code: 'loadstring(game:HttpGet("https://pastefy.app/dIzFr53A/raw"))()' },
+            { name: "For pc", code: 'loadstring(game:HttpGet("https://iyfvpnjrghsownkpazec.supabase.co/functions/v1/get-paste?slug=WZ6KxJ1A"))()' },
+            { name: "SA Script", code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/salihmahdu11-oss/SA-ALONE/refs/heads/main/SA%20%7C%20PVP"))()' },
+            { name: "RTX (Key: Rtxtop1)", code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/RTX261/script-/refs/heads/main/RTX"))()' },
+            { name: "FR l HUB", code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ook314745-svg/DULESSTEAL/refs/heads/main/brainrot"))()' },
+            { name: "Luminon Hub", code: 'loadstring(game:HttpGet("http://luminon.top/loader.lua"))()' },
+            { name: "N60 PVP", code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/N60Script/N60/refs/heads/main/PvP-N60-Hackers"))()' },
+            { name: "z3 Script", code: 'loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/89e7717db605d4502c0b92a1a77e49f8.lua"))()' },
+            { name: "ors Script (Key: trial)", code: 'script_key = "trial"; loadstring(game:HttpGet("https://api.getpolsec.com/scripts/hosted/add6893208404c35a6e6680340ee4839b79d9afa18767a43145450597d1b16a4.lua"))()' },
+            { name: "zh Script", code: 'loadstring(game:HttpGet("https://msuelcjkfclhrnwuywte.supabase.co/functions/v1/get-paste?id=f8cdb979-7580-41b2-8069-04b5ca11d404"))()' },
+            { name: "Vel Script", code: 'loadstring(game:HttpGet("https://pastefy.app/OXgDc3mO/raw"))()' }
+        ];
+
+        const container = document.querySelector('.scripts-container');
+        scripts.forEach((s, idx) => {
+            const id = 's' + idx;
+            container.innerHTML += `
+                <div class="script-card">
+                    <div class="script-title">${s.name}</div>
+                    <div class="lua-window">
+                        <div class="lua-header">
+                            <div class="dot-group"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                            <span class="lua-label">lua</span>
+                        </div>
+                        <div class="lua-content" id="${id}">${s.code}</div>
+                    </div>
+                    <button class="copy-btn" onclick="cp('${id}', this)">نسخ السكربت 📋</button>
+                </div>
+            `;
+        });
+
+        // Matrix Animation
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const drops = Array(Math.floor(canvas.width/18)).fill(1);
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#9d4edd"; ctx.font = "18px monospace";
+            drops.forEach((y, i) => {
+                ctx.fillText(Math.floor(Math.random()*10), i*18, y*18);
+                if(y*18 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        let mInterval = setInterval(drawMatrix, 35);
+
+        // Stages
+        setTimeout(() => {
+            document.getElementById('loader-screen').style.display = 'none';
+            clearInterval(mInterval);
+            startWelcome();
+        }, 5000);
+
+        function startWelcome() {
+            document.getElementById('welcome-screen').style.display = 'flex';
+            const txt = "مرحبا بكم في موقع Rxz الموقع وا بل اخص السيرفر متخصص للسكربتات";
+            let i = 0;
+            function type() {
+                if (i < txt.length) {
+                    document.getElementById('typewriter-text').innerHTML += txt.charAt(i++);
+                    setTimeout(type, 80);
+                } else { document.getElementById('enter-btn').classList.add('show'); }
+            }
+            type();
+        }
+
+        function enterSite() {
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('main-site').style.display = 'block';
+            // أهم تعديل: السماح بالنزول لأسفل (Scroll)
+            document.body.style.overflow = 'visible';
+            document.documentElement.style.overflow = 'visible';
+        }
+
+        function cp(id, btn) {
+            navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
+                const old = btn.innerText; btn.innerText = "تم النسخ! ✅";
+                setTimeout(() => btn.innerText = old, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
